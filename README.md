@@ -85,7 +85,7 @@ The application automatically:
 
 ## Licence
 
-ISC Licence
+[MIT License](./LICENSE)
 
 ## Disclaimer
 
