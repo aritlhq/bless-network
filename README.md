@@ -13,7 +13,7 @@ A Node.js implementation for running Bless Network nodes with proxy support.
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/bless-network.git
+git clone https://github.com/aritlhq/bless-network.git
 cd bless-network
 ```
 
