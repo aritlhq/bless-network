@@ -12,6 +12,12 @@ const extensionVersion = '0.1.7';
 const PING_INTERVAL = 5000; // 1 minute in milliseconds
 const LOG_PREFIX = '[Bless Network]';
 
+// Validate environment variables
+if (!process.env.NODE_ID || !process.env.AUTH_TOKEN) {
+    console.error(`${LOG_PREFIX} Error: Missing required environment variables`);
+    process.exit(1);
+}
+
 // Add session tracking
 let currentSession = null;
 let lastPingTime = null;
@@ -31,21 +37,19 @@ async function getIpAddress() {
     }
 }
 
+// Add additional headers for VPS environment
+const defaultHeaders = {
+    'Accept': 'application/json, text/plain, */*',
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.AUTH_TOKEN}`,
+    'X-Extension-Version': extensionVersion,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Origin': 'https://gateway-run.bls.dev',
+    'Referer': 'https://gateway-run.bls.dev/'
+};
+
 // Function to make authenticated request
 async function makeRequest(url, options = {}) {
-    const defaultHeaders = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        'X-Extension-Version': extensionVersion,
-        'User-Agent': 'bless-network-node/1.0.0'
-    };
-
-    // Remove body for GET requests
-    if (options.method === 'GET' && options.body) {
-        delete options.body;
-    }
-
     const response = await fetch(url, {
         ...options,
         headers: {
@@ -54,8 +58,16 @@ async function makeRequest(url, options = {}) {
         }
     });
 
+    // Enhanced error handling
     if (!response.ok) {
         const text = await response.text();
+        console.error(`${LOG_PREFIX} Full response:`, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers),
+            body: text.slice(0, 500)
+        });
+        
         try {
             const errorJson = JSON.parse(text);
             throw new Error(`API Error: ${errorJson.message || text}`);
@@ -64,7 +76,12 @@ async function makeRequest(url, options = {}) {
         }
     }
 
-    return response.json();
+    try {
+        return await response.json();
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Error parsing response:`, error);
+        throw new Error('Invalid JSON response');
+    }
 }
 
 // Function to start session with proper body
@@ -177,6 +194,9 @@ async function main() {
 
     } catch (error) {
         console.error(`${LOG_PREFIX} Fatal Error:`, error.message);
+        console.error(`${LOG_PREFIX} Stack:`, error.stack);
+        // Wait 30 seconds before exiting to prevent rapid restarts
+        await new Promise(resolve => setTimeout(resolve, 30000));
         process.exit(1);
     }
 }
