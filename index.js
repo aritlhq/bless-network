@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import axios from 'axios';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 const baseUrl = 'https://gateway-run.bls.dev/api/v1';
 const ipCheckUrl = 'https://api.ipify.org?format=json';
@@ -25,6 +26,22 @@ const defaultHeaders = {
     'sec-ch-ua-platform': '"Windows"'
 };
 
+// Setup proxy configuration
+const proxyConfig = {
+    host: process.env.PROXY_HOST || '103.179.57.186',
+    port: process.env.PROXY_PORT || '8080'
+};
+
+// Create proxy agent
+const httpsAgent = new HttpsProxyAgent(`http://${proxyConfig.host}:${proxyConfig.port}`);
+
+// Modified axios instance
+const api = axios.create({
+    httpsAgent,
+    timeout: 30000,
+    validateStatus: false
+});
+
 // Validate environment variables
 if (!process.env.NODE_ID || !process.env.AUTH_TOKEN) {
     console.error(`${LOG_PREFIX} Error: Missing required environment variables`);
@@ -38,7 +55,8 @@ let lastPingTime = null;
 // Function to get IP address with better error handling
 async function getIpAddress() {
     try {
-        const response = await axios.get(ipCheckUrl);
+        // Using different IP check service that works with proxies
+        const response = await api.get('https://api.myip.com');
         if (response.status !== 200) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -52,23 +70,25 @@ async function getIpAddress() {
 // Modified makeRequest function
 async function makeRequest(url, options = {}) {
     try {
-        const response = await axios({
+        const response = await api({
             url,
             ...options,
             headers: {
                 ...defaultHeaders,
                 ...options.headers
             },
-            validateStatus: false // Handle HTTP errors manually
+            proxy: false // Use the global proxy agent instead
         });
 
         if (response.status !== 200) {
-            throw new Error(`HTTP Error ${response.status}: ${response.data}`);
+            throw new Error(`HTTP Error ${response.status}: ${JSON.stringify(response.data)}`);
         }
 
         return response.data;
     } catch (error) {
         console.error(`${LOG_PREFIX} Request failed:`, error.message);
+        // Add delay on error
+        await delay(5000);
         throw error;
     }
 }
