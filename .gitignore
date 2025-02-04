@@ -1,3 +1,4 @@
 node_modules
 _sampleData.js
 .env
+proxies.txt
