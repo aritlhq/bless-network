@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import axios from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import fs from 'fs';
+import readline from 'readline';
+import { displayBanner } from './banner.js';
 
 const baseUrl = 'https://gateway-run.bls.dev/api/v1';
 const ipCheckUrl = 'https://api.ipify.org?format=json';
@@ -9,6 +12,9 @@ const authToken = process.env.AUTH_TOKEN;
 const extensionVersion = '0.1.7';
 const PING_INTERVAL = 10000; // back to 1 minute
 const LOG_PREFIX = '[Bless Network]';
+
+// Display the banner
+displayBanner();
 
 // Better headers simulation
 const defaultHeaders = {
@@ -26,18 +32,35 @@ const defaultHeaders = {
     'sec-ch-ua-platform': '"Windows"'
 };
 
-// Setup proxy configuration
-const proxyConfig = {
-    host: process.env.PROXY_HOST || '103.179.57.186',
-    port: process.env.PROXY_PORT || '8080'
-};
+// Read proxies from file
+const proxies = [];
+const fileStream = fs.createReadStream('proxies.txt');
+const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity
+});
 
-// Create proxy agent
-const httpsAgent = new HttpsProxyAgent(`http://${proxyConfig.host}:${proxyConfig.port}`);
+rl.on('line', (line) => {
+    const [host, port, username, password] = line.split(':');
+    proxies.push({ host, port, username, password });
+});
 
-// Modified axios instance
+rl.on('close', () => {
+    if (proxies.length === 0) {
+        console.error(`${LOG_PREFIX} No proxies found in proxies.txt`);
+        process.exit(1);
+    }
+    main();
+});
+
+// Function to get a random proxy
+function getRandomProxy() {
+    const proxy = proxies[Math.floor(Math.random() * proxies.length)];
+    return `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
+}
+
+// Create axios instance with proxy agent
 const api = axios.create({
-    httpsAgent,
     timeout: 30000,
     validateStatus: false
 });
@@ -67,9 +90,11 @@ async function getIpAddress() {
     }
 }
 
-// Modified makeRequest function
+// Modified makeRequest function to use random proxy
 async function makeRequest(url, options = {}) {
     try {
+        const proxyUrl = getRandomProxy();
+        const httpsAgent = new HttpsProxyAgent(proxyUrl);
         const response = await api({
             url,
             ...options,
@@ -77,7 +102,7 @@ async function makeRequest(url, options = {}) {
                 ...defaultHeaders,
                 ...options.headers
             },
-            proxy: false // Use the global proxy agent instead
+            httpsAgent
         });
 
         if (response.status !== 200) {
@@ -235,5 +260,5 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-// Run the main function
-main();
+// Run the main function after proxies are loaded
+// main(); // Remove this line, as main() will be called after proxies are loaded
