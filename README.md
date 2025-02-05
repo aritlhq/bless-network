@@ -5,7 +5,7 @@ A Node.js implementation for running Bless Network nodes with proxy support.
 ## Prerequisites
 
 - Node.js v16 or higher
-- npm (Node Package Manager)
+- npm
 - A valid Bless Network account and authentication token
 - Access to proxies listed in `proxies.txt`
 
@@ -28,7 +28,7 @@ npm install
      - `NODE_ID`: Your Bless Network node identifier
      - `AUTH_TOKEN`: Your authentication token
    - Copy `proxies-example.txt` to `proxies.txt`
-   
+
 4. Prepare your proxies:
    - Ensure `proxies.txt` contains your proxy list in the format `hostname:port:username:password`
 
@@ -83,10 +83,15 @@ The application automatically:
 - Regularly update dependencies
 - Monitor your node's activities
 
+
+## Donations
+If you would like to support the development of this project, you can make a donation using the following addresses:
+
+
+- **Solana**: `AyqspD9yMBWNTq7jv8dUx9YLgvctsaGdVGN8oGmZn2np`
+- **EVM**: `0xFFc3448Fb50d9B053e7Ae03B72f45c85fC0EfC56`
+
+
 ## Licence
 
 [MIT License](./LICENSE)
-
-## Disclaimer
-
-This is an unofficial implementation. Use at your own discretion and ensure compliance with Bless Network's terms of service.
