@@ -13,10 +13,8 @@ const extensionVersion = '0.1.7';
 const PING_INTERVAL = 10000; // back to 1 minute
 const LOG_PREFIX = '[Bless Network]';
 
-// Display the banner
 displayBanner();
 
-// Better headers simulation
 const defaultHeaders = {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.9',
@@ -32,7 +30,6 @@ const defaultHeaders = {
     'sec-ch-ua-platform': '"Windows"'
 };
 
-// Read proxies from file
 const proxies = [];
 const fileStream = fs.createReadStream('proxies.txt');
 const rl = readline.createInterface({
@@ -53,32 +50,26 @@ rl.on('close', () => {
     main();
 });
 
-// Function to get a random proxy
 function getRandomProxy() {
     const proxy = proxies[Math.floor(Math.random() * proxies.length)];
     return `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
 }
 
-// Create axios instance with proxy agent
 const api = axios.create({
     timeout: 30000,
     validateStatus: false
 });
 
-// Validate environment variables
 if (!process.env.NODE_ID || !process.env.AUTH_TOKEN) {
     console.error(`${LOG_PREFIX} Error: Missing required environment variables`);
     process.exit(1);
 }
 
-// Add session tracking
 let currentSession = null;
 let lastPingTime = null;
 
-// Function to get IP address with better error handling
 async function getIpAddress() {
     try {
-        // Using different IP check service that works with proxies
         const response = await api.get('https://api.myip.com');
         if (response.status !== 200) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -90,7 +81,6 @@ async function getIpAddress() {
     }
 }
 
-// Modified makeRequest function to use random proxy
 async function makeRequest(url, options = {}) {
     try {
         const proxyUrl = getRandomProxy();
@@ -121,7 +111,6 @@ async function makeRequest(url, options = {}) {
 // Add delay helper
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Function to start session with proper body
 async function startSession(nodeId) {
     try {
         const ipAddress = await getIpAddress();
@@ -145,7 +134,6 @@ async function startSession(nodeId) {
     }
 }
 
-// Function to send ping with proper body
 async function sendPing(nodeId, sessionData) {
     try {
         return await makeRequest(`${baseUrl}/nodes/${nodeId}/ping`, {
@@ -163,29 +151,23 @@ async function sendPing(nodeId, sessionData) {
     }
 }
 
-// Function to format date
 function formatDate(date) {
     return date.toISOString().replace('T', ' ').slice(0, -5);
 }
 
-// Modified main function
 async function main() {
     try {
-        // Initial delay to avoid immediate requests
         await delay(2000);
 
-        // Get initial node info
         const ipAddress = await getIpAddress();
         console.log('IP Address:', ipAddress);
 
-        // Get hardware info
         const hardwareInfo = {
             platform: process.platform,
             arch: process.arch,
             version: process.version
         };
 
-        // Get node data - changed to use query parameters instead of body
         const nodeData = await makeRequest(`${baseUrl}/nodes/${nodeId}`, {
             method: 'GET',
             headers: {
@@ -205,10 +187,8 @@ async function main() {
         console.log(`${LOG_PREFIX} Session Started at ${formatDate(new Date())}`);
         console.log(`${LOG_PREFIX} Session ID: ${currentSession._id}`);
 
-        // Setup periodic ping with complete data and better logging
         setInterval(async () => {
             try {
-                // Random delay between 1-5 seconds before each ping
                 await delay(1000 + Math.random() * 4000);
 
                 const currentIp = await getIpAddress();
@@ -230,7 +210,6 @@ async function main() {
             }
         }, PING_INTERVAL);
 
-        // Log successful startup
         console.log(`${LOG_PREFIX} Node running successfully`);
         console.log(`${LOG_PREFIX} IP Address: ${ipAddress}`);
         console.log(`${LOG_PREFIX} Node ID: ${nodeId}`);
@@ -243,7 +222,6 @@ async function main() {
     }
 }
 
-// Add cleanup on exit
 process.on('SIGINT', async () => {
     console.log(`\n${LOG_PREFIX} Shutting down...`);
     if (currentSession) {
@@ -259,6 +237,3 @@ process.on('SIGINT', async () => {
     }
     process.exit(0);
 });
-
-// Run the main function after proxies are loaded
-// main(); // Remove this line, as main() will be called after proxies are loaded
